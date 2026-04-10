@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install "black>=25,<26" flake8
+      - run: black --check icelandic_asr/
+      - run: flake8 icelandic_asr/
+
+  test:
+    name: Install & smoke-test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Install CPU-only PyTorch first (saves ~2 GB vs default CUDA build)
+      - name: Install CPU-only PyTorch
+        run: pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install package
+        run: pip install .
+
+      # Verify all imports resolve
+      - name: Import check
+        run: python -c "from icelandic_asr.server import app, state, IS_MODELS, TURBO_MODEL_ID; print('imports OK')"
+
+      # Start server on CPU, wait for it, send a request with synthetic audio
+      - name: Smoke test
+        run: |
+          python -c "
+          import torchaudio, torch, io
+          # 1s of silence as WAV
+          buf = io.BytesIO()
+          torchaudio.save(buf, torch.zeros(1, 16000), 16000, format='wav')
+          with open('test_silence.wav', 'wb') as f:
+              f.write(buf.getvalue())
+          "
+
+          # Start server in background (CPU, wav2vec2)
+          icelandic-asr --devices cpu --port 9123 &
+          SERVER_PID=$!
+
+          # Wait for server to be ready (model download + load)
+          echo "Waiting for server..."
+          for i in $(seq 1 120); do
+            if curl -sf http://localhost:9123/v1/status > /dev/null 2>&1; then
+              echo "Server ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+
+          # Check status endpoint
+          echo "=== /v1/status ==="
+          curl -sf http://localhost:9123/v1/status | python -m json.tool
+
+          # Transcribe silence (should return empty or near-empty text)
+          echo "=== /v1/audio/transcriptions ==="
+          HTTP_CODE=$(curl -sf -o response.json -w "%{http_code}" \
+            -X POST http://localhost:9123/v1/audio/transcriptions \
+            -F file=@test_silence.wav)
+
+          echo "HTTP $HTTP_CODE"
+          cat response.json | python -m json.tool
+
+          # Must be 200
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "FAIL: expected HTTP 200, got $HTTP_CODE"
+            kill $SERVER_PID 2>/dev/null
+            exit 1
+          fi
+
+          echo "Smoke test passed"
+          kill $SERVER_PID 2>/dev/null
+        timeout-minutes: 10

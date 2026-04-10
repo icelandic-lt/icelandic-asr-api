@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=65.5.1", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "icelandic-asr"
+version = "0.1.0"
+description = "Icelandic ASR Service — OpenAI Whisper-compatible"
+readme = "README.md"
+license = "Apache-2.0"
+authors = [
+    {name = "Grammatek ehf", email = "info@grammatek.com"}
+]
+maintainers = [
+    {name = "Grammatek ehf", email = "info@grammatek.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+keywords = [
+    "asr",
+    "speech-recognition",
+    "icelandic",
+    "whisper",
+    "wav2vec2",
+    "openai-api",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.4",
+    "torchaudio>=2.4",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "transformers>=4.40",
+    "faster-whisper>=1.1",
+    "omnivad>=0.2.0",
+    "huggingface_hub>=0.23",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=25.0.0,<26",
+    "flake8>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/icelandic-lt/icelandic-asr-api"
+Documentation = "https://github.com/icelandic-lt/icelandic-asr-api#readme"
+Repository = "https://github.com/icelandic-lt/icelandic-asr-api"
+Issues = "https://github.com/icelandic-lt/icelandic-asr-api/issues"
+
+[project.scripts]
+icelandic-asr = "icelandic_asr.server:main"
+
+[tool.setuptools]
+packages = ["icelandic_asr"]
+
+[tool.black]
+line-length = 79
+target-version = ['py311', 'py312', 'py313']

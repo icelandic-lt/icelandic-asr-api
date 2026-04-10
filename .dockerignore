@@ -1,0 +1,12 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+*.egg-info
+dist
+build
+.uv
+uv.lock
+README.md
+LICENSE
