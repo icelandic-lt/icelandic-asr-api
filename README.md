@@ -101,6 +101,20 @@ black icelandic_asr/
 flake8 icelandic_asr/
 ```
 
+### Running transcription tests
+
+With a running server, verify transcription accuracy against the included Icelandic test audio:
+
+```bash
+# Against local server (default: http://localhost:8000)
+python tests/verify_transcriptions.py
+
+# Against a custom endpoint
+python tests/verify_transcriptions.py http://localhost:9000
+```
+
+The test sends each `test-audio/*.wav` with both auto language detection and explicit `language=is`, then compares results against the reference `.txt` files using character-level similarity (95% threshold).
+
 </details>
 
 <details>

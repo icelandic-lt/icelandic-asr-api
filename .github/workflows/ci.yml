@@ -45,18 +45,9 @@ jobs:
       - name: Import check
         run: python -c "from icelandic_asr.server import app, state, IS_MODELS, TURBO_MODEL_ID; print('imports OK')"
 
-      # Start server on CPU, wait for it, send a request with synthetic audio
-      - name: Smoke test
+      # Start server, verify transcription against reference texts
+      - name: Transcription test
         run: |
-          python -c "
-          import struct, wave
-          with wave.open('test_silence.wav', 'wb') as w:
-              w.setnchannels(1)
-              w.setsampwidth(2)
-              w.setframerate(16000)
-              w.writeframes(struct.pack('<' + 'h' * 16000, *([0] * 16000)))
-          "
-
           # Start server in background (CPU, wav2vec2)
           icelandic-asr --devices cpu --port 9123 &
           SERVER_PID=$!
@@ -75,22 +66,13 @@ jobs:
           echo "=== /v1/status ==="
           curl -sf http://localhost:9123/v1/status | python -m json.tool
 
-          # Transcribe silence (should return empty or near-empty text)
-          echo "=== /v1/audio/transcriptions ==="
-          HTTP_CODE=$(curl -sf -o response.json -w "%{http_code}" \
-            -X POST http://localhost:9123/v1/audio/transcriptions \
-            -F file=@test_silence.wav)
+          # Check health endpoint
+          echo "=== /health ==="
+          curl -sf http://localhost:9123/health | python -m json.tool
 
-          echo "HTTP $HTTP_CODE"
-          cat response.json | python -m json.tool
+          # Verify transcriptions against reference texts
+          echo "=== Transcription verification ==="
+          python tests/verify_transcriptions.py http://localhost:9123
 
-          # Must be 200
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "FAIL: expected HTTP 200, got $HTTP_CODE"
-            kill $SERVER_PID 2>/dev/null
-            exit 1
-          fi
-
-          echo "Smoke test passed"
           kill $SERVER_PID 2>/dev/null
         timeout-minutes: 10
