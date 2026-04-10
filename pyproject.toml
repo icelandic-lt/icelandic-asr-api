@@ -39,6 +39,7 @@ dependencies = [
     "torch>=2.4",
     "torchaudio>=2.4",
     "fastapi>=0.115",
+    "python-multipart>=0.0.9",
     "uvicorn[standard]>=0.34",
     "transformers>=4.40",
     "faster-whisper>=1.1",
