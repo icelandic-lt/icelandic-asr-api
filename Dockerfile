@@ -19,7 +19,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 COPY pyproject.toml .
 RUN uv pip install --no-cache \
         fastapi python-multipart "uvicorn[standard]" transformers \
-        faster-whisper omnivad huggingface_hub numpy
+        faster-whisper omnivad soundfile huggingface_hub numpy
 
 # Copy source code and install package (no-deps, deps already installed)
 COPY .flake8 .

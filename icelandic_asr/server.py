@@ -31,6 +31,7 @@ from faster_whisper import WhisperModel
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from omnivad import OmniVAD
+import soundfile as sf
 from starlette.responses import PlainTextResponse
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 from transformers import pipeline as hf_pipeline
@@ -568,9 +569,14 @@ async def transcriptions(request: Request):
 
     buf = io.BytesIO(audio_content)
     try:
-        waveform, sr = torchaudio.load(buf)
-    except Exception:
-        raise HTTPException(400, "Could not decode audio file")
+        data, sr = sf.read(buf, dtype="float32")
+        waveform = torch.from_numpy(data)
+        if waveform.dim() == 2:
+            # (samples, channels) → (channels, samples)
+            waveform = waveform.T
+    except Exception as e:
+        log.warning(f"[{req_id}] decode failed: {e}")
+        raise HTTPException(400, f"Could not decode audio file: {e}")
 
     # Grab a worker (round-robin)
     worker = await state.pool.get()
