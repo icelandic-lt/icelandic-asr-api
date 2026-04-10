@@ -49,12 +49,12 @@ jobs:
       - name: Smoke test
         run: |
           python -c "
-          import torchaudio, torch, io
-          # 1s of silence as WAV
-          buf = io.BytesIO()
-          torchaudio.save(buf, torch.zeros(1, 16000), 16000, format='wav')
-          with open('test_silence.wav', 'wb') as f:
-              f.write(buf.getvalue())
+          import struct, wave
+          with wave.open('test_silence.wav', 'wb') as w:
+              w.setnchannels(1)
+              w.setsampwidth(2)
+              w.setframerate(16000)
+              w.writeframes(struct.pack('<' + 'h' * 16000, *([0] * 16000)))
           "
 
           # Start server in background (CPU, wav2vec2)
